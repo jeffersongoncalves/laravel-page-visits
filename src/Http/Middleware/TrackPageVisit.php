@@ -31,7 +31,7 @@ class TrackPageVisit
 
     public function terminate(Request $request, Response $response): void
     {
-        if (! $request->isMethod('GET') || $this->isExcluded($request->path())) {
+        if (! $request->isMethod('GET') || $this->isExcluded($request->path()) || $this->isExcludedRoute($request)) {
             return;
         }
 
@@ -70,6 +70,18 @@ class TrackPageVisit
     protected function isExcluded(string $path): bool
     {
         return Str::is(config('page-visits.exclude', []), $path);
+    }
+
+    /**
+     * Route-name exclusion, for routes whose path can't be globbed (e.g. a
+     * short-link redirect fallback route matching an arbitrary key at the
+     * root) but whose name is stable and known.
+     */
+    protected function isExcludedRoute(Request $request): bool
+    {
+        $routeName = $request->route()->getName();
+
+        return $routeName !== null && Str::is(config('page-visits.exclude_route_names', []), $routeName);
     }
 
     protected function responseTimeMs(Request $request): ?int

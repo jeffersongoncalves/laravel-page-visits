@@ -44,7 +44,24 @@ return [
     'exclude' => [
         'livewire/update', 'admin/*', 'app/*', 'horizon/*', '_debugbar/*',
         'sw.js', 'manifest.json', 'favicon-proxy', 'up', 'og/*',
+        'sitemap.xml', 'llms.txt', 'robots.txt',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Excluded Route Names
+    |--------------------------------------------------------------------------
+    |
+    | Glob patterns (matched via Str::is()) against the current route's name
+    | — for routes a path glob can't reliably target, e.g. a short-link
+    | redirect fallback route that matches an arbitrary key at the root
+    | (jeffersongoncalves/laravel-short-url's "short-url.redirect"). Empty
+    | by default — this package doesn't know what other packages an app has
+    | installed, so add app-specific route names here after publishing this
+    | config.
+    |
+    */
+    'exclude_route_names' => [],
 
     /*
     |--------------------------------------------------------------------------

@@ -7,6 +7,7 @@ use JeffersonGoncalves\LaravelPageVisits\Jobs\TrackPageVisitJob;
 beforeEach(function () {
     Route::get('/hello', fn () => 'hi')->middleware('web');
     Route::get('/admin/dashboard', fn () => 'admin')->middleware('web');
+    Route::get('/{key}', fn () => 'redirect')->middleware('web')->name('short-url.redirect');
 });
 
 it('dispatches the tracking job for an included path', function () {
@@ -30,6 +31,15 @@ it('skips non-GET requests', function () {
     Queue::fake();
 
     $this->post('/hello')->assertOk();
+
+    Queue::assertNotPushed(TrackPageVisitJob::class);
+});
+
+it('skips routes excluded by name, even when the path is unpredictable', function () {
+    config(['page-visits.exclude_route_names' => ['short-url.redirect']]);
+    Queue::fake();
+
+    $this->get('/2kLwqwP')->assertOk();
 
     Queue::assertNotPushed(TrackPageVisitJob::class);
 });
