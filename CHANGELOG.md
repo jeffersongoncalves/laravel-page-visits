@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.0.3 - 2026-09-11
+
+Fixed
+
+- Excluded paths now cover the bare root of a prefix, not just its
+  sub-paths — Str::is('horizon/*', 'horizon') is false, so visiting
+  /horizon itself leaked into page_visits despite horizon/* being
+  excluded. Same gap fixed for admin/*, app/*, _debugbar/*, og/*.
+
 ## 1.0.2 - 2026-09-11
 
 Fixed
