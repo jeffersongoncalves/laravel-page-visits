@@ -6,6 +6,7 @@ use JeffersonGoncalves\LaravelPageVisits\Jobs\TrackPageVisitJob;
 
 beforeEach(function () {
     Route::get('/hello', fn () => 'hi')->middleware('web');
+    Route::get('/admin', fn () => 'admin-root')->middleware('web');
     Route::get('/admin/dashboard', fn () => 'admin')->middleware('web');
     Route::get('/{key}', fn () => 'redirect')->middleware('web')->name('short-url.redirect');
 });
@@ -22,6 +23,14 @@ it('skips excluded paths defined via glob patterns in config', function () {
     Queue::fake();
 
     $this->get('/admin/dashboard')->assertOk();
+
+    Queue::assertNotPushed(TrackPageVisitJob::class);
+});
+
+it('skips the bare root of an excluded prefix, not just its sub-paths', function () {
+    Queue::fake();
+
+    $this->get('/admin')->assertOk();
 
     Queue::assertNotPushed(TrackPageVisitJob::class);
 });

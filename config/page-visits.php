@@ -42,8 +42,16 @@ return [
     |
     */
     'exclude' => [
-        'livewire/update', 'admin/*', 'app/*', 'horizon/*', '_debugbar/*',
-        'sw.js', 'manifest.json', 'favicon-proxy', 'up', 'og/*',
+        // Bare segment AND "/*" for each — Str::is('horizon/*', 'horizon')
+        // is false, so the no-trailing-slash root of a sub-app (e.g. the
+        // Horizon dashboard's own index) needs its own exact entry too.
+        'livewire/update',
+        'admin', 'admin/*',
+        'app', 'app/*',
+        'horizon', 'horizon/*',
+        '_debugbar', '_debugbar/*',
+        'sw.js', 'manifest.json', 'favicon-proxy', 'up',
+        'og', 'og/*',
         'sitemap.xml', 'llms.txt', 'robots.txt',
     ],
 
