@@ -1,0 +1,70 @@
+{
+    "name": "jeffersongoncalves/laravel-page-visits",
+    "description": "Track page-view visits on any Laravel app's public routes, with device/browser/geo/locale/referer/UTM capture",
+    "keywords": [
+        "laravel",
+        "page-visits",
+        "analytics",
+        "tracking",
+        "geoip"
+    ],
+    "homepage": "https://github.com/jeffersongoncalves/laravel-page-visits",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Jefferson Gonçalves",
+            "email": "gerson.simao.92@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "spatie/laravel-package-tools": "^1.16",
+        "illuminate/contracts": "^12.0|^13.0",
+        "jeffersongoncalves/laravel-visitor-fingerprint": "^1.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.24",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0|^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "JeffersonGoncalves\\LaravelPageVisits\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JeffersonGoncalves\\LaravelPageVisits\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint",
+        "analyse": "vendor/bin/phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "JeffersonGoncalves\\LaravelPageVisits\\LaravelPageVisitsServiceProvider"
+            ],
+            "aliases": {
+                "LaravelPageVisits": "JeffersonGoncalves\\LaravelPageVisits\\Facades\\LaravelPageVisits"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
