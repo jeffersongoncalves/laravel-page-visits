@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.0.2 - 2026-09-11
+
+Fixed
+
+- Routes whose path is unpredictable (e.g. a short-link redirect
+  fallback route matching an arbitrary key at the root) leaked into
+  page_visits, double-tracking the same visit already recorded by
+  the redirect package itself. Fixes #2.
+
+Added
+
+- page-visits.exclude_route_names: glob-matched against the current
+  route name, for routes a path glob can't target. Empty by default —
+  add your app's redirect-style route names after publishing config.
+- sitemap.xml, llms.txt, robots.txt now excluded by default (path
+  glob) — never real page views.
+
 ## 1.0.0 - 2026-09-11
 
 Initial release.
