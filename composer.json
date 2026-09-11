@@ -59,10 +59,7 @@
         "laravel": {
             "providers": [
                 "JeffersonGoncalves\\LaravelPageVisits\\LaravelPageVisitsServiceProvider"
-            ],
-            "aliases": {
-                "LaravelPageVisits": "JeffersonGoncalves\\LaravelPageVisits\\Facades\\LaravelPageVisits"
-            }
+            ]
         }
     },
     "minimum-stability": "dev",
