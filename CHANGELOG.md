@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.0 - 2026-09-12
+
+Add page-visits:aggregate-and-prune command with page_visit_daily_stats table for daily aggregation and retention pruning. Closes #3.
+
 ## 1.0.3 - 2026-09-11
 
 Fixed
