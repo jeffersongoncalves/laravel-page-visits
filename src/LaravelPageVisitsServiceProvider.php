@@ -4,6 +4,7 @@ namespace JeffersonGoncalves\LaravelPageVisits;
 
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Http\Kernel as FoundationKernel;
+use JeffersonGoncalves\LaravelPageVisits\Console\Commands\AggregateAndPruneCommand;
 use JeffersonGoncalves\LaravelPageVisits\Http\Middleware\TrackPageVisit;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -15,7 +16,11 @@ class LaravelPageVisitsServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-page-visits')
             ->hasConfigFile('page-visits')
-            ->hasMigration('create_page_visits_table');
+            ->hasMigration('create_page_visits_table')
+            ->hasMigration('create_page_visit_daily_stats_table')
+            ->hasCommands([
+                AggregateAndPruneCommand::class,
+            ]);
     }
 
     public function packageBooted(): void
