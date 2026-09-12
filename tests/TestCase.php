@@ -32,14 +32,20 @@ abstract class TestCase extends Orchestra
 
     protected function defineDatabaseMigrations(): void
     {
-        $stub = __DIR__.'/../database/migrations/create_page_visits_table.php.stub';
         $tempPath = sys_get_temp_dir().'/laravel-page-visits-migrations';
 
         if (! is_dir($tempPath)) {
             mkdir($tempPath, 0755, true);
         }
 
-        copy($stub, $tempPath.'/0001_01_01_000000_create_page_visits_table.php');
+        copy(
+            __DIR__.'/../database/migrations/create_page_visits_table.php.stub',
+            $tempPath.'/0001_01_01_000000_create_page_visits_table.php'
+        );
+        copy(
+            __DIR__.'/../database/migrations/create_page_visit_daily_stats_table.php.stub',
+            $tempPath.'/0001_01_01_000001_create_page_visit_daily_stats_table.php'
+        );
 
         $this->loadMigrationsFrom($tempPath);
     }

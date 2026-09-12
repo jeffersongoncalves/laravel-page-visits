@@ -14,6 +14,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Daily Stats Table
+    |--------------------------------------------------------------------------
+    |
+    | Name of the table page-visits:aggregate-and-prune folds each day's raw
+    | rows into before pruning them.
+    |
+    */
+    'daily_stats_table' => 'page_visit_daily_stats',
+
+    /*
+    |--------------------------------------------------------------------------
     | Field Tracking
     |--------------------------------------------------------------------------
     |
@@ -88,8 +99,9 @@ return [
     | Retention
     |--------------------------------------------------------------------------
     |
-    | Documented placeholder for a future pruning command — not enforced by
-    | this package yet.
+    | Raw visit rows older than this are pruned by page-visits:aggregate-
+    | and-prune after being folded into daily_stats_table. Schedule the
+    | command yourself — this package does not run it automatically.
     |
     */
     'retention_days' => env('PAGE_VISITS_RETENTION_DAYS', 400),

@@ -55,12 +55,37 @@ $service->exportForIp($ip);  // matching rows as arrays
 $service->forgetForIp($ip);  // nulls ip_hash/ip_anonymized/ip_version/user_agent_hash in place
 ```
 
+### Daily aggregation and retention pruning
+
+`page_visits` grows unbounded otherwise. Schedule `page-visits:aggregate-and-prune` to fold each
+day's raw rows into `page_visit_daily_stats` and delete raw rows older than
+`page-visits.retention_days`:
+
+```php
+// routes/console.php (Laravel 11+) or app/Console/Kernel.php
+Schedule::command('page-visits:aggregate-and-prune')->dailyAt('01:00');
+```
+
+Run it for a specific day (e.g. to backfill) with `--date`:
+
+```bash
+php artisan page-visits:aggregate-and-prune --date=2026-09-01
+```
+
+`page_visit_daily_stats` holds one row per date with `visits_count`, `unique_visits_count`,
+`bot_visits_count`, plus JSON breakdowns (`device_stats`, `browser_stats`, `os_stats`,
+`country_stats`, `city_stats`, `referer_stats`, `referer_type_stats`, `utm_source_stats`,
+`utm_medium_stats`, `utm_campaign_stats`, `language_stats`, `hourly_stats`) — query it directly via
+`DB::table(config('page-visits.daily_stats_table'))` for "last 7/30/90 days" reporting instead of
+scanning raw rows.
+
 ## Configuration
 
 ```php
 // config/page-visits.php
 return [
     'table' => 'page_visits',
+    'daily_stats_table' => 'page_visit_daily_stats',
 
     'track_ip_address' => true,
     'track_browser' => true,
