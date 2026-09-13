@@ -100,11 +100,28 @@ return [
     |--------------------------------------------------------------------------
     |
     | Raw visit rows older than this are pruned by page-visits:aggregate-
-    | and-prune after being folded into daily_stats_table. Schedule the
-    | command yourself — this package does not run it automatically.
+    | and-prune after being folded into daily_stats_table.
     |
     */
     'retention_days' => env('PAGE_VISITS_RETENTION_DAYS', 400),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scheduling
+    |--------------------------------------------------------------------------
+    |
+    | This package self-registers page-visits:aggregate-and-prune on the
+    | schedule once the app boots — no host-side Schedule::command() needed.
+    | Set enabled to false to opt out (e.g. to run it yourself with
+    | different args, or on a queue worker only).
+    |
+    */
+    'scheduling' => [
+        'aggregate_and_prune' => [
+            'enabled' => env('PAGE_VISITS_SCHEDULE_AGGREGATE_AND_PRUNE', true),
+            'time' => env('PAGE_VISITS_SCHEDULE_AGGREGATE_AND_PRUNE_TIME', '02:30'),
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
