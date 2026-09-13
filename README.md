@@ -57,13 +57,20 @@ $service->forgetForIp($ip);  // nulls ip_hash/ip_anonymized/ip_version/user_agen
 
 ### Daily aggregation and retention pruning
 
-`page_visits` grows unbounded otherwise. Schedule `page-visits:aggregate-and-prune` to fold each
-day's raw rows into `page_visit_daily_stats` and delete raw rows older than
-`page-visits.retention_days`:
+`page_visits` grows unbounded otherwise. The package self-schedules `page-visits:aggregate-and-prune`
+daily at `02:30` (configurable via `page-visits.scheduling.aggregate_and_prune`) — no setup needed,
+as long as the host app's scheduler is running (`schedule:run` on cron, or `schedule:work` locally).
+It folds each day's raw rows into `page_visit_daily_stats` and deletes raw rows older than
+`page-visits.retention_days`.
+
+Opt out (e.g. to run it yourself with different args) via config or env:
 
 ```php
-// routes/console.php (Laravel 11+) or app/Console/Kernel.php
-Schedule::command('page-visits:aggregate-and-prune')->dailyAt('01:00');
+'scheduling' => [
+    'aggregate_and_prune' => [
+        'enabled' => false, // PAGE_VISITS_SCHEDULE_AGGREGATE_AND_PRUNE
+    ],
+],
 ```
 
 Run it for a specific day (e.g. to backfill) with `--date`:
@@ -104,6 +111,13 @@ return [
     'auto_register_middleware' => true,
 
     'retention_days' => env('PAGE_VISITS_RETENTION_DAYS', 400),
+
+    'scheduling' => [
+        'aggregate_and_prune' => [
+            'enabled' => env('PAGE_VISITS_SCHEDULE_AGGREGATE_AND_PRUNE', true),
+            'time' => env('PAGE_VISITS_SCHEDULE_AGGREGATE_AND_PRUNE_TIME', '02:30'),
+        ],
+    ],
 
     'compliance' => [
         'analytics_only' => env('PAGE_VISITS_ANALYTICS_ONLY', false),

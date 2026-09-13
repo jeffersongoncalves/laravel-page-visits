@@ -2,6 +2,7 @@
 
 namespace JeffersonGoncalves\LaravelPageVisits;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Http\Kernel as FoundationKernel;
 use JeffersonGoncalves\LaravelPageVisits\Console\Commands\AggregateAndPruneCommand;
@@ -41,5 +42,15 @@ class LaravelPageVisitsServiceProvider extends PackageServiceProvider
         if ($kernel instanceof FoundationKernel) {
             $kernel->appendMiddlewareToGroup('web', TrackPageVisit::class);
         }
+
+        $this->app->booted(function (): void {
+            if (! config('page-visits.scheduling.aggregate_and_prune.enabled', true)) {
+                return;
+            }
+
+            $this->app->make(Schedule::class)
+                ->command(AggregateAndPruneCommand::class)
+                ->dailyAt(config('page-visits.scheduling.aggregate_and_prune.time', '02:30'));
+        });
     }
 }
