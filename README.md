@@ -115,6 +115,9 @@ Every `track_*` toggle nulls out its own column instead of skipping the row — 
 recorded, just with less detail when a toggle is off. `compliance.analytics_only` additionally nulls
 every PII column (`ip_hash`, `ip_anonymized`, `ip_version`, `user_agent_hash`).
 
+`daily_stats_table` and `retention_days` are read by `page-visits:aggregate-and-prune` — see
+[Daily aggregation and retention pruning](#daily-aggregation-and-retention-pruning) above.
+
 GeoIP resolution, bot detection, IP anonymization, and referer classification are all delegated to
 [`jeffersongoncalves/laravel-visitor-fingerprint`](https://github.com/jeffersongoncalves/laravel-visitor-fingerprint) —
 see its README to configure the GeoIP driver (`headers`/`ip_api`/`maxmind`).
