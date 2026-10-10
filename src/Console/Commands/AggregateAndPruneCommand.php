@@ -64,6 +64,7 @@ class AggregateAndPruneCommand extends Command
         }
 
         $stats['hourly_stats'] = $this->hourlyCounts($query());
+        $stats['response_time_stats'] = $this->responseTimeStats($query());
 
         DB::table(config('page-visits.daily_stats_table', 'page_visit_daily_stats'))->updateOrInsert(
             ['date' => $date->toDateString()],
@@ -83,6 +84,7 @@ class AggregateAndPruneCommand extends Command
                 'utm_campaign_stats' => json_encode($stats['utm_campaign_stats']),
                 'language_stats' => json_encode($stats['language_stats']),
                 'hourly_stats' => json_encode($stats['hourly_stats']),
+                'response_time_stats' => $stats['response_time_stats'] === null ? null : json_encode($stats['response_time_stats']),
                 'updated_at' => now(),
             ]
         );
@@ -125,6 +127,47 @@ class AggregateAndPruneCommand extends Command
             ->pluck('aggregate', 'hour')
             ->mapWithKeys(fn ($count, $hour) => [(int) $hour => (int) $count])
             ->all();
+    }
+
+    /**
+     * Nearest-rank percentiles over the day's response times (bots included:
+     * this measures server load, not audience).
+     *
+     * @param  Builder<PageVisit>  $query
+     * @return array{count: int, avg: int, min: int, max: int, p50: int, p95: int, p99: int}|null
+     */
+    protected function responseTimeStats(Builder $query): ?array
+    {
+        $query->whereNotNull('response_time_ms');
+
+        $totals = $query->clone()
+            ->toBase()
+            ->selectRaw('count(*) as total, avg(response_time_ms) as average, min(response_time_ms) as fastest, max(response_time_ms) as slowest')
+            ->first();
+
+        $count = (int) $totals->total;
+
+        if ($count === 0) {
+            return null;
+        }
+
+        // One indexed-offset query per percentile keeps memory flat however
+        // many visits the day holds.
+        $percentile = fn (int $p): int => (int) $query->clone()
+            ->orderBy('response_time_ms')
+            ->offset(max(0, (int) ceil($p / 100 * $count) - 1))
+            ->limit(1)
+            ->value('response_time_ms');
+
+        return [
+            'count' => $count,
+            'avg' => (int) round((float) $totals->average),
+            'min' => (int) $totals->fastest,
+            'max' => (int) $totals->slowest,
+            'p50' => $percentile(50),
+            'p95' => $percentile(95),
+            'p99' => $percentile(99),
+        ];
     }
 
     protected function hourExpression(): string

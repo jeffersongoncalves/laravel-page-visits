@@ -36,6 +36,51 @@ it('folds yesterdays visits into a daily_stats row and prunes old visits', funct
         ->and(PageVisit::query()->count())->toBe(1);
 });
 
+it('aggregates response time metrics', function () {
+    foreach ([...range(10, 100, 10), null] as $ms) {
+        PageVisit::query()->create([
+            'visited_at' => now()->subDay()->setTime(10, 0),
+            'path' => 'blog/hello-world',
+            'method' => 'GET',
+            'is_bot' => false,
+            'response_time_ms' => $ms,
+            'created_at' => now()->subDay(),
+        ]);
+    }
+
+    $this->artisan('page-visits:aggregate-and-prune')->assertExitCode(0);
+
+    $row = DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->first();
+
+    // ksort: MySQL's JSON column reorders keys.
+    $stats = json_decode((string) $row->response_time_stats, true);
+    ksort($stats);
+
+    expect($stats)->toBe([
+        'avg' => 55,
+        'count' => 10,
+        'max' => 100,
+        'min' => 10,
+        'p50' => 50,
+        'p95' => 100,
+        'p99' => 100,
+    ]);
+});
+
+it('stores null response time metrics when no visit has a timing', function () {
+    PageVisit::query()->create([
+        'visited_at' => now()->subDay()->setTime(10, 0),
+        'path' => 'blog/hello-world',
+        'method' => 'GET',
+        'is_bot' => false,
+        'created_at' => now()->subDay(),
+    ]);
+
+    $this->artisan('page-visits:aggregate-and-prune')->assertExitCode(0);
+
+    expect(DB::table('page_visit_daily_stats')->value('response_time_stats'))->toBeNull();
+});
+
 it('accepts a --date option to backfill a specific day', function () {
     $date = now()->subDays(5);
 

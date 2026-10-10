@@ -42,6 +42,10 @@ abstract class TestCase extends Orchestra
             __DIR__.'/../database/migrations/create_page_visit_daily_stats_table.php.stub',
             $tempPath.'/0001_01_01_000001_create_page_visit_daily_stats_table.php'
         );
+        copy(
+            __DIR__.'/../database/migrations/add_response_time_stats_to_page_visit_daily_stats_table.php.stub',
+            $tempPath.'/0001_01_01_000002_add_response_time_stats_to_page_visit_daily_stats_table.php'
+        );
 
         $this->loadMigrationsFrom($tempPath);
     }
