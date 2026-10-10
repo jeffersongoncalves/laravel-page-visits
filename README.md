@@ -86,6 +86,15 @@ php artisan page-visits:aggregate-and-prune --date=2026-09-01
 `DB::table(config('page-visits.daily_stats_table'))` for "last 7/30/90 days" reporting instead of
 scanning raw rows.
 
+`response_time_stats` holds that day's server response times in milliseconds (bots included):
+`{"count": 1200, "avg": 180, "min": 12, "max": 1654, "p50": 140, "p95": 520, "p99": 980}`, or
+`null` when no visit was timed. Upgrading from 1.2.x? Republish and run the new migration:
+
+```bash
+php artisan vendor:publish --tag="page-visits-migrations"
+php artisan migrate
+```
+
 ## Configuration
 
 ```php
