@@ -138,28 +138,32 @@ class AggregateAndPruneCommand extends Command
      */
     protected function responseTimeStats(Builder $query): ?array
     {
-        // ponytail: loads one int per visit for the day into memory; switch to
-        // SQL percentile functions if a single day reaches millions of rows.
-        $times = $query
-            ->whereNotNull('response_time_ms')
-            ->orderBy('response_time_ms')
-            ->pluck('response_time_ms')
-            ->map(fn ($ms) => (int) $ms)
-            ->all();
+        $query->whereNotNull('response_time_ms');
 
-        $count = count($times);
+        $totals = $query->clone()
+            ->toBase()
+            ->selectRaw('count(*) as total, avg(response_time_ms) as average, min(response_time_ms) as fastest, max(response_time_ms) as slowest')
+            ->first();
+
+        $count = (int) $totals->total;
 
         if ($count === 0) {
             return null;
         }
 
-        $percentile = fn (int $p): int => $times[max(0, (int) ceil($p / 100 * $count) - 1)];
+        // One indexed-offset query per percentile keeps memory flat however
+        // many visits the day holds.
+        $percentile = fn (int $p): int => (int) $query->clone()
+            ->orderBy('response_time_ms')
+            ->offset(max(0, (int) ceil($p / 100 * $count) - 1))
+            ->limit(1)
+            ->value('response_time_ms');
 
         return [
             'count' => $count,
-            'avg' => (int) round(array_sum($times) / $count),
-            'min' => $times[0],
-            'max' => $times[$count - 1],
+            'avg' => (int) round((float) $totals->average),
+            'min' => (int) $totals->fastest,
+            'max' => (int) $totals->slowest,
             'p50' => $percentile(50),
             'p95' => $percentile(95),
             'p99' => $percentile(99),

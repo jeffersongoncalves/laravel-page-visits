@@ -52,12 +52,15 @@ it('aggregates response time metrics', function () {
 
     $row = DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->first();
 
-    // toEqual: MySQL's JSON column reorders keys.
-    expect(json_decode((string) $row->response_time_stats, true))->toEqual([
-        'count' => 10,
+    // ksort: MySQL's JSON column reorders keys.
+    $stats = json_decode((string) $row->response_time_stats, true);
+    ksort($stats);
+
+    expect($stats)->toBe([
         'avg' => 55,
-        'min' => 10,
+        'count' => 10,
         'max' => 100,
+        'min' => 10,
         'p50' => 50,
         'p95' => 100,
         'p99' => 100,
