@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.3.0 - 2026-10-10
+
+### What's new
+
+- Daily response time metrics: `page-visits:aggregate-and-prune` now stores `response_time_stats` on `page_visit_daily_stats` with `count`, `avg`, `min`, `max`, `p50`, `p95`, `p99` (ms), or `null` when no visit was timed. Computed with SQL aggregates, so memory stays flat on busy days (#11).
+
+### Upgrading from 1.2.x
+
+A new migration adds the column:
+
+```bash
+php artisan vendor:publish --tag="page-visits-migrations"
+php artisan migrate
+
+```
 ## 1.2.0 - 2026-09-13
 
 Self-schedule page-visits:aggregate-and-prune by default (dailyAt 02:30), with an opt-out toggle via page-visits.scheduling.aggregate_and_prune.enabled. Closes #5.
