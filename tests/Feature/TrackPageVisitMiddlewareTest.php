@@ -53,6 +53,25 @@ it('skips routes excluded by name, even when the path is unpredictable', functio
     Queue::assertNotPushed(TrackPageVisitJob::class);
 });
 
+it('skips bot requests when store_bots is off but still tracks humans', function () {
+    config(['page-visits.store_bots' => false]);
+    Queue::fake();
+
+    $this->withHeader('User-Agent', 'Googlebot/2.1 (+http://www.google.com/bot.html)')->get('/hello')->assertOk();
+    Queue::assertNotPushed(TrackPageVisitJob::class);
+
+    $this->withHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36')->get('/hello')->assertOk();
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === false);
+});
+
+it('tracks bot requests by default', function () {
+    Queue::fake();
+
+    $this->withHeader('User-Agent', 'Googlebot/2.1 (+http://www.google.com/bot.html)')->get('/hello')->assertOk();
+
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === true);
+});
+
 it('snapshots app()->getLocale() at request time, not inside the queued job', function () {
     Queue::fake();
     app()->setLocale('pt_BR');
