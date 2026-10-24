@@ -89,7 +89,9 @@ return [
     |
     | When false, TrackPageVisit skips requests BotDetector flags as bots —
     | no raw row is written, so page_visit_daily_stats.bot_visits_count stays
-    | 0 and response_time_stats covers humans only.
+    | 0 and response_time_stats covers humans only. Applies to new visits
+    | only: bot rows stored before the switch are still aggregated until
+    | retention_days prunes them.
     |
     */
     'store_bots' => env('PAGE_VISITS_STORE_BOTS', true),
