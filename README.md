@@ -144,7 +144,9 @@ every PII column (`ip_hash`, `ip_anonymized`, `ip_version`, `user_agent_hash`).
 
 Set `store_bots` to `false` (`PAGE_VISITS_STORE_BOTS=false`) to skip crawler requests entirely: no
 raw row is written for them, so `bot_visits_count` stays `0` and `response_time_stats` covers human
-visits only. Bots are often the bulk of `page_visits`, so this keeps the table small without
+visits only. This affects only visits recorded after the switch: bot rows already in `page_visits`
+are still folded into the daily stats (e.g. the day you flip it, or a `--date` backfill) until
+`retention_days` prunes them. Bots are often the bulk of `page_visits`, so this keeps the table small without
 shortening `retention_days` for human visits.
 
 `daily_stats_table` and `retention_days` are read by `page-visits:aggregate-and-prune` — see
