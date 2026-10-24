@@ -36,6 +36,11 @@ class TrackPageVisit
         }
 
         $userAgent = (string) $request->userAgent();
+        $isBot = BotDetector::isBot($userAgent);
+
+        if ($isBot && ! config('page-visits.store_bots', true)) {
+            return;
+        }
 
         try {
             TrackPageVisitJob::dispatch([
@@ -52,7 +57,7 @@ class TrackPageVisit
                 'browser_language' => AcceptLanguage::preferred($request->headers->get('accept-language')),
                 'locale' => app()->getLocale(),
                 'app_host' => (string) $request->getHost(),
-                'is_bot' => BotDetector::isBot($userAgent),
+                'is_bot' => $isBot,
                 'device_type' => UserAgentParser::fastDeviceType($userAgent),
                 'operating_system' => UserAgentParser::fastOperatingSystem($userAgent),
                 'utm_source' => $request->query('utm_source'),

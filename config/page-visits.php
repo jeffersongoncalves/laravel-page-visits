@@ -84,6 +84,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Store Bot Visits
+    |--------------------------------------------------------------------------
+    |
+    | When false, TrackPageVisit skips requests BotDetector flags as bots —
+    | no raw row is written, so page_visit_daily_stats.bot_visits_count stays
+    | 0 and response_time_stats covers humans only.
+    |
+    */
+    'store_bots' => env('PAGE_VISITS_STORE_BOTS', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Auto-Register Middleware
     |--------------------------------------------------------------------------
     |
