@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.4.0 - 2026-10-24
+
+### What's new
+
+- New `store_bots` config (`PAGE_VISITS_STORE_BOTS`, default `true`). Set it to `false` to skip crawler requests entirely: no raw `page_visits` row is written for visits `BotDetector` flags as bots, which keeps the table small without shortening `retention_days` for human visits (#14, closes #13).
+
+With the flag off, `bot_visits_count` stays `0` and `response_time_stats` covers human visits only. It applies to new visits only: bot rows stored before the switch are still aggregated until `retention_days` prunes them.
+
+### Upgrading from 1.3.x
+
+No migration needed. Default behaviour is unchanged. To opt in, set `PAGE_VISITS_STORE_BOTS=false` (or add `'store_bots' => false` to a published config).
+
 ## 1.3.0 - 2026-10-10
 
 ### What's new
@@ -15,6 +27,7 @@ A new migration adds the column:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 ```
 ## 1.2.0 - 2026-09-13
