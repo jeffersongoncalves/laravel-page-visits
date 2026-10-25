@@ -156,8 +156,9 @@ shortening `retention_days` for human visits.
 Headless scrapers on cloud hosts send real browser user-agents, so bot detection misses them.
 `datacenter_asns` lists cloud/hosting ASNs (AWS, Google Cloud, Azure, Tencent, Huawei, DigitalOcean,
 OVH, Hetzner by default — `AS` prefix optional); a visit whose GeoIP ASN matches is stored with
-`is_datacenter = true` and counted in `datacenter_visits_count` instead of `visits_count` /
-`unique_visits_count`. This needs a GeoIP driver that resolves the ASN (e.g. `ip_api`). Set
+`is_datacenter = true` and left out of `visits_count` / `unique_visits_count`. Matching non-bot
+visits are counted in `datacenter_visits_count`; matching bot visits stay in `bot_visits_count`
+only. This needs a GeoIP driver that resolves the ASN (e.g. `ip_api`). Set
 `store_datacenter` to `false` (`PAGE_VISITS_STORE_DATACENTER=false`) to drop those visits entirely.
 
 `daily_stats_table` and `retention_days` are read by `page-visits:aggregate-and-prune` — see
