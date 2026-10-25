@@ -57,6 +57,14 @@ class TrackPageVisitJob implements ShouldQueue
 
         $ipAttributes = $this->ipAttributes($payload);
         $geo = $ip !== '' ? $this->resolveGeo($geoIp, $ip, $payload['geo_headers']) : new GeoLocation;
+        $isDatacenter = $this->isDatacenter($geo->asn);
+
+        // The ASN is only known after the GeoIP lookup, so unlike store_bots
+        // (checked in the middleware) this one can only skip here.
+        if ($isDatacenter && ! config('page-visits.store_datacenter', true)) {
+            return;
+        }
+
         $ua = $this->userAgentAttributes($payload);
         $referer = $this->refererAttributes($payload);
 
@@ -87,7 +95,7 @@ class TrackPageVisitJob implements ShouldQueue
             'is_vpn' => false,
             'is_proxy' => false,
             'is_tor' => false,
-            'is_datacenter' => false,
+            'is_datacenter' => $isDatacenter,
             'response_time_ms' => $payload['response_time_ms'],
             'created_at' => now(),
         ]));
@@ -144,6 +152,27 @@ class TrackPageVisitJob implements ShouldQueue
             'referer_host' => $payload['referer_url'] ? parse_url($payload['referer_url'], PHP_URL_HOST) : null,
             'referer_type' => RefererClassifier::classify($payload['referer_url'], $payload['app_host']),
         ];
+    }
+
+    /**
+     * Matches on the AS number only — drivers report it with a trailing org
+     * name ("AS15169 Google LLC"), and config entries may omit the "AS".
+     */
+    protected function isDatacenter(?string $asn): bool
+    {
+        $number = fn (string $value): ?string => preg_match('/^\s*(?:AS)?(\d+)/i', $value, $m) ? $m[1] : null;
+
+        if ($asn === null || ($asnNumber = $number($asn)) === null) {
+            return false;
+        }
+
+        foreach ((array) config('page-visits.datacenter_asns', []) as $entry) {
+            if ($number((string) $entry) === $asnNumber) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

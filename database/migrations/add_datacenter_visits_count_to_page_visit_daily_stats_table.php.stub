@@ -1,0 +1,22 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table(config('page-visits.daily_stats_table', 'page_visit_daily_stats'), function (Blueprint $table) {
+            $table->unsignedBigInteger('datacenter_visits_count')->default(0)->after('bot_visits_count');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table(config('page-visits.daily_stats_table', 'page_visit_daily_stats'), function (Blueprint $table) {
+            $table->dropColumn('datacenter_visits_count');
+        });
+    }
+};

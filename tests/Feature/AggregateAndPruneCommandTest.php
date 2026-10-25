@@ -36,6 +36,29 @@ it('folds yesterdays visits into a daily_stats row and prunes old visits', funct
         ->and(PageVisit::query()->count())->toBe(1);
 });
 
+it('counts datacenter visits apart from human visits', function () {
+    foreach ([[false, false, 'hash-1'], [false, true, 'hash-2'], [false, true, 'hash-3'], [true, true, 'hash-4']] as [$isBot, $isDatacenter, $ipHash]) {
+        PageVisit::query()->create([
+            'visited_at' => now()->subDay()->setTime(10, 0),
+            'path' => 'blog/hello-world',
+            'method' => 'GET',
+            'is_bot' => $isBot,
+            'is_datacenter' => $isDatacenter,
+            'ip_hash' => $ipHash,
+            'created_at' => now()->subDay(),
+        ]);
+    }
+
+    $this->artisan('page-visits:aggregate-and-prune')->assertExitCode(0);
+
+    $row = DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->first();
+
+    expect((int) $row->visits_count)->toBe(1)
+        ->and((int) $row->unique_visits_count)->toBe(1)
+        ->and((int) $row->datacenter_visits_count)->toBe(2)
+        ->and((int) $row->bot_visits_count)->toBe(1);
+});
+
 it('aggregates response time metrics', function () {
     foreach ([...range(10, 100, 10), null] as $ms) {
         PageVisit::query()->create([

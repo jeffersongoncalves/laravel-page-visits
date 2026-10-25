@@ -53,10 +53,13 @@ class AggregateAndPruneCommand extends Command
 
         $query = fn (): Builder => PageVisit::query()->where('visited_at', '>=', $from)->where('visited_at', '<=', $to);
 
+        $humans = fn (): Builder => $query()->where('is_bot', false)->where('is_datacenter', false);
+
         $stats = [
-            'visits_count' => $query()->where('is_bot', false)->count(),
-            'unique_visits_count' => $query()->where('is_bot', false)->distinct()->count('ip_hash'),
+            'visits_count' => $humans()->count(),
+            'unique_visits_count' => $humans()->distinct()->count('ip_hash'),
             'bot_visits_count' => $query()->where('is_bot', true)->count(),
+            'datacenter_visits_count' => $query()->where('is_bot', false)->where('is_datacenter', true)->count(),
         ];
 
         foreach (self::DIMENSION_COLUMNS as $key => $column) {
@@ -72,6 +75,7 @@ class AggregateAndPruneCommand extends Command
                 'visits_count' => $stats['visits_count'],
                 'unique_visits_count' => $stats['unique_visits_count'],
                 'bot_visits_count' => $stats['bot_visits_count'],
+                'datacenter_visits_count' => $stats['datacenter_visits_count'],
                 'device_stats' => json_encode($stats['device_stats']),
                 'browser_stats' => json_encode($stats['browser_stats']),
                 'os_stats' => json_encode($stats['os_stats']),

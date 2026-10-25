@@ -80,7 +80,7 @@ php artisan page-visits:aggregate-and-prune --date=2026-09-01
 ```
 
 `page_visit_daily_stats` holds one row per date with `visits_count`, `unique_visits_count`,
-`bot_visits_count`, plus JSON breakdowns (`device_stats`, `browser_stats`, `os_stats`,
+`bot_visits_count`, `datacenter_visits_count`, plus JSON breakdowns (`device_stats`, `browser_stats`, `os_stats`,
 `country_stats`, `city_stats`, `referer_stats`, `referer_type_stats`, `utm_source_stats`,
 `utm_medium_stats`, `utm_campaign_stats`, `language_stats`, `hourly_stats`) — query it directly via
 `DB::table(config('page-visits.daily_stats_table'))` for "last 7/30/90 days" reporting instead of
@@ -88,7 +88,8 @@ scanning raw rows.
 
 `response_time_stats` holds that day's server response times in milliseconds (bots included, unless `store_bots` is off):
 `{"count": 1200, "avg": 180, "min": 12, "max": 1654, "p50": 140, "p95": 520, "p99": 980}`, or
-`null` when no visit was timed. Upgrading from 1.2.x? Republish and run the new migration:
+`null` when no visit was timed. Upgrading from an older release? Republish and run the new
+migrations (`response_time_stats`, `datacenter_visits_count`):
 
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
@@ -121,6 +122,9 @@ return [
 
     'store_bots' => env('PAGE_VISITS_STORE_BOTS', true),
 
+    'datacenter_asns' => ['AS14618', 'AS16509', 'AS15169', 'AS396982', /* ... */],
+    'store_datacenter' => env('PAGE_VISITS_STORE_DATACENTER', true),
+
     'auto_register_middleware' => true,
 
     'retention_days' => env('PAGE_VISITS_RETENTION_DAYS', 400),
@@ -148,6 +152,14 @@ visits only. This affects only visits recorded after the switch: bot rows alread
 are still folded into the daily stats (e.g. the day you flip it, or a `--date` backfill) until
 `retention_days` prunes them. Bots are often the bulk of `page_visits`, so this keeps the table small without
 shortening `retention_days` for human visits.
+
+Headless scrapers on cloud hosts send real browser user-agents, so bot detection misses them.
+`datacenter_asns` lists cloud/hosting ASNs (AWS, Google Cloud, Azure, Tencent, Huawei, DigitalOcean,
+OVH, Hetzner by default — `AS` prefix optional); a visit whose GeoIP ASN matches is stored with
+`is_datacenter = true` and left out of `visits_count` / `unique_visits_count`. Matching non-bot
+visits are counted in `datacenter_visits_count`; matching bot visits stay in `bot_visits_count`
+only. This needs a GeoIP driver that resolves the ASN (e.g. `ip_api`). Set
+`store_datacenter` to `false` (`PAGE_VISITS_STORE_DATACENTER=false`) to drop those visits entirely.
 
 `daily_stats_table` and `retention_days` are read by `page-visits:aggregate-and-prune` — see
 [Daily aggregation and retention pruning](#daily-aggregation-and-retention-pruning) above.
