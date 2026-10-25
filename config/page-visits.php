@@ -98,6 +98,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Datacenter Traffic
+    |--------------------------------------------------------------------------
+    |
+    | Headless scrapers on cloud hosts send real browser user-agents, so
+    | BotDetector misses them. TrackPageVisitJob flags a visit is_datacenter
+    | when the GeoIP driver's ASN is in datacenter_asns ("AS" prefix
+    | optional); requires a driver that resolves the ASN (e.g. ip_api).
+    | Flagged non-bot visits are counted in datacenter_visits_count instead
+    | of visits_count / unique_visits_count.
+    |
+    | When store_datacenter is false, flagged visits aren't stored at all.
+    |
+    */
+    'datacenter_asns' => [
+        'AS14618', 'AS16509', // Amazon AWS
+        'AS15169', 'AS396982', // Google Cloud
+        'AS8075', // Microsoft Azure
+        'AS132203', 'AS45090', // Tencent Cloud
+        'AS136907', // Huawei Cloud
+        'AS14061', // DigitalOcean
+        'AS16276', // OVH
+        'AS24940', // Hetzner
+    ],
+
+    'store_datacenter' => env('PAGE_VISITS_STORE_DATACENTER', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Auto-Register Middleware
     |--------------------------------------------------------------------------
     |

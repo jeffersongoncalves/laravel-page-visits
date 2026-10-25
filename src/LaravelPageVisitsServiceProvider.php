@@ -20,6 +20,7 @@ class LaravelPageVisitsServiceProvider extends PackageServiceProvider
             ->hasMigration('create_page_visits_table')
             ->hasMigration('create_page_visit_daily_stats_table')
             ->hasMigration('add_response_time_stats_to_page_visit_daily_stats_table')
+            ->hasMigration('add_datacenter_visits_count_to_page_visit_daily_stats_table')
             ->hasCommands([
                 AggregateAndPruneCommand::class,
             ]);

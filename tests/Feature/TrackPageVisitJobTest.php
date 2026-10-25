@@ -3,6 +3,7 @@
 use JeffersonGoncalves\LaravelPageVisits\Jobs\TrackPageVisitJob;
 use JeffersonGoncalves\LaravelPageVisits\Models\PageVisit;
 use JeffersonGoncalves\VisitorFingerprint\Contracts\GeoIpDriver;
+use JeffersonGoncalves\VisitorFingerprint\Data\GeoLocation;
 
 /**
  * @return array<string, mixed>
@@ -67,6 +68,43 @@ it('nulls out a column when its track_* config toggle is off', function () {
         ->and($visit->device_type)->toBeNull()
         // Untouched toggles still capture their value.
         ->and($visit->operating_system)->toBe('Windows');
+});
+
+function geoIpWithAsn(?string $asn): GeoIpDriver
+{
+    return new class($asn) implements GeoIpDriver
+    {
+        public function __construct(private ?string $asn) {}
+
+        public function resolve(string $ip): GeoLocation
+        {
+            return new GeoLocation(asn: $this->asn);
+        }
+    };
+}
+
+it('flags is_datacenter when the ASN is in datacenter_asns', function (?string $asn, bool $expected) {
+    config()->set('page-visits.datacenter_asns', ['AS132203', '14618']);
+
+    (new TrackPageVisitJob(pageVisitPayload()))->handle(geoIpWithAsn($asn));
+
+    expect(PageVisit::query()->first()->is_datacenter)->toBe($expected);
+})->with([
+    'listed, with org name' => ['AS132203 Tencent Building, Kejizhongyi Avenue', true],
+    'listed without AS prefix in config' => ['AS14618 Amazon.com, Inc.', true],
+    'prefix of a listed ASN' => ['AS1320 Some ISP', false],
+    'residential ISP' => ['AS28573 Claro S.A.', false],
+    'unresolved' => [null, false],
+]);
+
+it('skips datacenter visits when store_datacenter is off', function () {
+    config()->set('page-visits.datacenter_asns', ['AS132203']);
+    config()->set('page-visits.store_datacenter', false);
+
+    (new TrackPageVisitJob(pageVisitPayload()))->handle(geoIpWithAsn('AS132203 Tencent'));
+    (new TrackPageVisitJob(pageVisitPayload()))->handle(geoIpWithAsn('AS28573 Claro S.A.'));
+
+    expect(PageVisit::query()->pluck('asn')->all())->toBe(['AS28573 Claro S.A.']);
 });
 
 it('nulls out PII columns when compliance.analytics_only is enabled', function () {
