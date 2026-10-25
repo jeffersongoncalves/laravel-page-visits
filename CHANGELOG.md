@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.5.0 - 2026-10-25
+
+### What's new
+
+- **Datacenter traffic detection by ASN** (#15): `TrackPageVisitJob` now flags `is_datacenter` when the GeoIP ASN matches `page-visits.datacenter_asns` (AWS, Google Cloud, Azure, Tencent, Huawei, DigitalOcean, OVH, Hetzner by default; `AS` prefix optional). Requires a GeoIP driver that resolves the ASN (e.g. `ip_api`).
+- **`store_datacenter`** (default `true`, `PAGE_VISITS_STORE_DATACENTER`): set to `false` to drop datacenter visits entirely.
+- **`page-visits:aggregate-and-prune`**: `visits_count` / `unique_visits_count` exclude datacenter visits; matching non-bot visits are counted in the new `datacenter_visits_count` column.
+
+### Upgrade
+
+New migration — republish and migrate:
+
+```bash
+php artisan vendor:publish --tag="page-visits-migrations"
+php artisan migrate
+
+```
+**Full Changelog**: https://github.com/jeffersongoncalves/laravel-page-visits/compare/1.4.0...1.5.0
+
 ## 1.4.0 - 2026-10-24
 
 ### What's new
@@ -27,6 +46,7 @@ A new migration adds the column:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 
 ```
