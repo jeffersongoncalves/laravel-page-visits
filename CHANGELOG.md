@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.5.1 - 2026-10-28
+
+### Fixed
+
+- Stored strings are now clamped to their column size, so an oversized `path`, `Referer` or `utm_*` value no longer aborts the insert on PostgreSQL / strict MySQL. Array query values (`?utm_source[]=x`) are stored as `null`. (#17, #18)
+
 ## 1.5.0 - 2026-10-25
 
 ### What's new
@@ -17,6 +23,7 @@ New migration — republish and migrate:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 ```
 **Full Changelog**: https://github.com/jeffersongoncalves/laravel-page-visits/compare/1.4.0...1.5.0
@@ -46,6 +53,7 @@ A new migration adds the column:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 
 
