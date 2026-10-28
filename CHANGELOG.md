@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.6.0 - 2026-10-28
+
+### What's new
+
+- **`skip_status_codes`** (#20, closes #19): response statuses `TrackPageVisit` doesn't store — exact codes (`404`) or `x` wildcard ranges (`'4xx'`, `'50x'`). E.g. `[404]` keeps scanner probes with browser-like UAs from residential ASNs out of `page_visits` and `visits_count`. No `TrackPageVisitJob` is dispatched for a skipped status.
+
+### Upgrade
+
+No migration needed. Default is `[]`, so behaviour is unchanged. To opt in, add `'skip_status_codes' => [404]` to a published config.
+
+**Full Changelog**: https://github.com/jeffersongoncalves/laravel-page-visits/compare/1.5.1...1.6.0
+
 ## 1.5.1 - 2026-10-28
 
 ### Fixed
@@ -23,6 +35,7 @@ New migration — republish and migrate:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 
 ```
@@ -53,6 +66,7 @@ A new migration adds the column:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 
 
