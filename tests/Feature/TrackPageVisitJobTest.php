@@ -70,6 +70,22 @@ it('nulls out a column when its track_* config toggle is off', function () {
         ->and($visit->operating_system)->toBe('Windows');
 });
 
+it('clamps oversized request-derived strings to their column size', function () {
+    (new TrackPageVisitJob(pageVisitPayload([
+        'path' => str_repeat('é', 300),
+        'referer_url' => 'https://example.com/'.str_repeat('a', 3000),
+        'utm_source' => str_repeat('x', 300),
+        'utm_medium' => ['array'],
+    ])))->handle(app(GeoIpDriver::class));
+
+    $visit = PageVisit::query()->first();
+
+    expect($visit->path)->toBe(str_repeat('é', 255))
+        ->and(mb_strlen($visit->referer_url))->toBe(2048)
+        ->and($visit->utm_source)->toBe(str_repeat('x', 255))
+        ->and($visit->utm_medium)->toBeNull();
+});
+
 function geoIpWithAsn(?string $asn): GeoIpDriver
 {
     return new class($asn) implements GeoIpDriver
