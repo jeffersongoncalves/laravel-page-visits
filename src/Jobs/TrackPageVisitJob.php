@@ -37,6 +37,24 @@ class TrackPageVisitJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
+     * Column sizes from the migration stub that differ from the 255 default.
+     * Strict databases (PostgreSQL, strict MySQL) reject oversized values
+     * instead of truncating, and most of these strings are request-derived.
+     */
+    protected const COLUMN_LIMITS = [
+        'method' => 10,
+        'ip_hash' => 64,
+        'ip_anonymized' => 45,
+        'device_type' => 20,
+        'country_code' => 2,
+        'referer_url' => 2048,
+        'referer_type' => 20,
+        'browser_language' => 20,
+        'locale' => 20,
+        'user_agent_hash' => 64,
+    ];
+
+    /**
      * @param  Payload  $payload
      */
     public function __construct(public array $payload) {}
@@ -68,7 +86,7 @@ class TrackPageVisitJob implements ShouldQueue
         $ua = $this->userAgentAttributes($payload);
         $referer = $this->refererAttributes($payload);
 
-        PageVisit::query()->create(array_merge($ipAttributes, $ua, $referer, [
+        PageVisit::query()->create($this->clamp(array_merge($ipAttributes, $ua, $referer, [
             'visited_at' => now(),
             'path' => $payload['path'],
             'route_name' => $payload['route_name'],
@@ -98,7 +116,27 @@ class TrackPageVisitJob implements ShouldQueue
             'is_datacenter' => $isDatacenter,
             'response_time_ms' => $payload['response_time_ms'],
             'created_at' => now(),
-        ]));
+        ])));
+    }
+
+    /**
+     * Truncates strings to their column size and drops arrays (a query string
+     * like ?utm_source[]=x yields one).
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    protected function clamp(array $attributes): array
+    {
+        foreach ($attributes as $column => $value) {
+            if (is_array($value)) {
+                $attributes[$column] = null;
+            } elseif (is_string($value)) {
+                $attributes[$column] = mb_substr($value, 0, self::COLUMN_LIMITS[$column] ?? 255);
+            }
+        }
+
+        return $attributes;
     }
 
     /**
