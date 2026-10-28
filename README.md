@@ -122,6 +122,8 @@ return [
 
     'store_bots' => env('PAGE_VISITS_STORE_BOTS', true),
 
+    'skip_status_codes' => [],
+
     'datacenter_asns' => ['AS14618', 'AS16509', 'AS15169', 'AS396982', /* ... */],
     'store_datacenter' => env('PAGE_VISITS_STORE_DATACENTER', true),
 
@@ -152,6 +154,11 @@ visits only. This affects only visits recorded after the switch: bot rows alread
 are still folded into the daily stats (e.g. the day you flip it, or a `--date` backfill) until
 `retention_days` prunes them. Bots are often the bulk of `page_visits`, so this keeps the table small without
 shortening `retention_days` for human visits.
+
+`skip_status_codes` lists response statuses that are not stored at all — exact codes (`404`) or
+`x` wildcard ranges (`'4xx'`, `'50x'`). Scanner probes often send browser-like user-agents from
+residential ASNs, so neither `store_bots` nor `datacenter_asns` catches them; `[404]` keeps those
+probes out of `page_visits` and `visits_count`. Empty (default) stores every status.
 
 Headless scrapers on cloud hosts send real browser user-agents, so bot detection misses them.
 `datacenter_asns` lists cloud/hosting ASNs (AWS, Google Cloud, Azure, Tencent, Huawei, DigitalOcean,

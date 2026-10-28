@@ -98,6 +98,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Skipped Status Codes
+    |--------------------------------------------------------------------------
+    |
+    | Response status codes TrackPageVisit doesn't store — exact codes (404)
+    | or "x" wildcard ranges ('4xx', '50x'). E.g. [404] keeps scanner probes
+    | that end in a 404 out of page_visits and visits_count. Empty = store
+    | all.
+    |
+    */
+    'skip_status_codes' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Datacenter Traffic
     |--------------------------------------------------------------------------
     |

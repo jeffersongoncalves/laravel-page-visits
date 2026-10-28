@@ -31,7 +31,10 @@ class TrackPageVisit
 
     public function terminate(Request $request, Response $response): void
     {
-        if (! $request->isMethod('GET') || $this->isExcluded($request->path()) || $this->isExcludedRoute($request)) {
+        if (! $request->isMethod('GET')
+            || $this->isExcluded($request->path())
+            || $this->isExcludedRoute($request)
+            || $this->isSkippedStatus($response->getStatusCode())) {
             return;
         }
 
@@ -87,6 +90,20 @@ class TrackPageVisit
         $routeName = $request->route()->getName();
 
         return $routeName !== null && Str::is(config('page-visits.exclude_route_names', []), $routeName);
+    }
+
+    /**
+     * Exact codes (404) or "x" wildcard ranges ('4xx', '50x').
+     */
+    protected function isSkippedStatus(int $status): bool
+    {
+        $patterns = array_map(
+            // ponytail: Str::is only knows "*"; fine since status codes are always 3 digits.
+            fn ($code) => str_ireplace('x', '*', (string) $code),
+            config('page-visits.skip_status_codes', []),
+        );
+
+        return $patterns !== [] && Str::is($patterns, (string) $status);
     }
 
     protected function responseTimeMs(Request $request): ?int

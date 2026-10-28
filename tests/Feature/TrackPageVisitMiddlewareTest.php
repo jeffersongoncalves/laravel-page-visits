@@ -72,6 +72,37 @@ it('tracks bot requests by default', function () {
     Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === true);
 });
 
+it('skips responses whose status is in skip_status_codes but still tracks a 200', function () {
+    Route::get('/missing/page', fn () => abort(404))->middleware('web');
+    config(['page-visits.skip_status_codes' => [404]]);
+    Queue::fake();
+
+    $this->get('/missing/page')->assertNotFound();
+    Queue::assertNotPushed(TrackPageVisitJob::class);
+
+    $this->get('/hello')->assertOk();
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['path'] === 'hello');
+});
+
+it('matches x wildcard ranges in skip_status_codes', function () {
+    Route::get('/broken/page', fn () => abort(503))->middleware('web');
+    config(['page-visits.skip_status_codes' => ['5xx']]);
+    Queue::fake();
+
+    $this->get('/broken/page')->assertStatus(503);
+
+    Queue::assertNotPushed(TrackPageVisitJob::class);
+});
+
+it('stores 404s by default', function () {
+    Route::get('/missing/page', fn () => abort(404))->middleware('web');
+    Queue::fake();
+
+    $this->get('/missing/page')->assertNotFound();
+
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['status_code'] === 404);
+});
+
 it('snapshots app()->getLocale() at request time, not inside the queued job', function () {
     Queue::fake();
     app()->setLocale('pt_BR');
