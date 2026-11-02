@@ -2,9 +2,11 @@
 
 namespace JeffersonGoncalves\LaravelPageVisits\Console\Commands;
 
+use Closure;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use JeffersonGoncalves\LaravelPageVisits\Models\PageVisit;
 
@@ -53,13 +55,24 @@ class AggregateAndPruneCommand extends Command
 
         $query = fn (): Builder => PageVisit::query()->where('visited_at', '>=', $from)->where('visited_at', '<=', $to);
 
-        $humans = fn (): Builder => $query()->where('is_bot', false)->where('is_datacenter', false);
+        // Farm rows count as bots here only; the stored is_bot stays as
+        // captured, so changing the threshold and re-running restores them.
+        $farm = $this->farmUserAgentHashes($query);
+        $hasFarm = $farm->isNotEmpty();
+
+        $notBot = fn (): Builder => $query()->where('is_bot', false)->when($hasFarm, fn (Builder $q) => $q->where(
+            // whereNotIn alone would drop null hashes (NULL NOT IN … is null).
+            fn (Builder $q) => $q->whereNull('user_agent_hash')->orWhereNotIn('user_agent_hash', $farm)
+        ));
+        $humans = fn (): Builder => $notBot()->where('is_datacenter', false);
 
         $stats = [
             'visits_count' => $humans()->count(),
             'unique_visits_count' => $humans()->distinct()->count('ip_hash'),
-            'bot_visits_count' => $query()->where('is_bot', true)->count(),
-            'datacenter_visits_count' => $query()->where('is_bot', false)->where('is_datacenter', true)->count(),
+            'bot_visits_count' => $query()->where(
+                fn (Builder $q) => $q->where('is_bot', true)->when($hasFarm, fn (Builder $q) => $q->orWhereIn('user_agent_hash', $farm))
+            )->count(),
+            'datacenter_visits_count' => $notBot()->where('is_datacenter', true)->count(),
         ];
 
         foreach (self::DIMENSION_COLUMNS as $key => $column) {
@@ -92,6 +105,31 @@ class AggregateAndPruneCommand extends Command
                 'updated_at' => now(),
             ]
         );
+    }
+
+    /**
+     * Crawler farms behind rotating residential proxies reuse a handful of
+     * exact user agents across hundreds of IPs a day. Returns the day's
+     * user_agent_hash values seen from more than farm_ua_ip_threshold
+     * distinct ip_hash values (empty when the threshold is off).
+     *
+     * @param  Closure(): Builder<PageVisit>  $query
+     * @return Collection<int, string>
+     */
+    protected function farmUserAgentHashes(Closure $query): Collection
+    {
+        $threshold = config('page-visits.farm_ua_ip_threshold');
+
+        if (! is_numeric($threshold) || (int) $threshold <= 0) {
+            return collect();
+        }
+
+        return $query()
+            ->whereNotNull('user_agent_hash')
+            ->whereNotNull('ip_hash')
+            ->groupBy('user_agent_hash')
+            ->havingRaw('count(distinct ip_hash) > ?', [(int) $threshold])
+            ->pluck('user_agent_hash');
     }
 
     protected function prune(): void

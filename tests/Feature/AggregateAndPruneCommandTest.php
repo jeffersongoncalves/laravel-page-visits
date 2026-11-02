@@ -59,6 +59,42 @@ it('counts datacenter visits apart from human visits', function () {
         ->and((int) $row->bot_visits_count)->toBe(1);
 });
 
+it('moves user agents seen from more than farm_ua_ip_threshold IPs into bot visits', function () {
+    config(['page-visits.farm_ua_ip_threshold' => 2]);
+
+    $visit = fn (string $ua, string $ip) => PageVisit::query()->create([
+        'visited_at' => now()->subDay()->setTime(10, 0),
+        'path' => 'blog/hello-world',
+        'method' => 'GET',
+        'is_bot' => false,
+        'ip_hash' => $ip,
+        'user_agent_hash' => $ua,
+        'created_at' => now()->subDay(),
+    ]);
+
+    foreach (['ip-1', 'ip-2', 'ip-3'] as $ip) {
+        $visit('farm-ua', $ip);
+    }
+    $visit('real-ua', 'ip-4');
+    $visit('real-ua', 'ip-4');
+    $visit('real-ua', 'ip-5');
+
+    $this->artisan('page-visits:aggregate-and-prune')->assertExitCode(0);
+
+    $row = DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->first();
+
+    expect((int) $row->visits_count)->toBe(3)
+        ->and((int) $row->unique_visits_count)->toBe(2)
+        ->and((int) $row->bot_visits_count)->toBe(3)
+        // Raw rows keep their capture-time flag, so turning the threshold off restores them.
+        ->and(PageVisit::query()->where('is_bot', true)->count())->toBe(0);
+
+    config(['page-visits.farm_ua_ip_threshold' => null]);
+    $this->artisan('page-visits:aggregate-and-prune')->assertExitCode(0);
+
+    expect((int) DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->value('visits_count'))->toBe(6);
+});
+
 it('aggregates response time metrics', function () {
     foreach ([...range(10, 100, 10), null] as $ms) {
         PageVisit::query()->create([

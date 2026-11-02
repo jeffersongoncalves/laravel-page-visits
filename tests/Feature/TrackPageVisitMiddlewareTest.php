@@ -64,6 +64,21 @@ it('skips bot requests when store_bots is off but still tracks humans', function
     Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === false);
 });
 
+it('flags requests without Accept-Language as bots unless require_accept_language is off', function () {
+    Queue::fake();
+    // Empty, not omitted: Symfony's Request::create() adds a default Accept-Language.
+    $headers = ['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36', 'Accept-Language' => ''];
+
+    $this->withHeaders($headers)->get('/hello')->assertOk();
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === true);
+
+    config(['page-visits.require_accept_language' => false]);
+    Queue::fake();
+
+    $this->withHeaders($headers)->get('/hello')->assertOk();
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === false);
+});
+
 it('tracks bot requests by default', function () {
     Queue::fake();
 
