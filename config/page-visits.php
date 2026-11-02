@@ -98,6 +98,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Require Accept-Language
+    |--------------------------------------------------------------------------
+    |
+    | Every real browser sends an Accept-Language header. When true, a
+    | request without one is flagged is_bot (and skipped when store_bots is
+    | false) — catches scripted clients with browser-like user agents on
+    | residential proxies, which BotDetector and datacenter_asns both miss.
+    |
+    */
+    'require_accept_language' => env('PAGE_VISITS_REQUIRE_ACCEPT_LANGUAGE', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | User-Agent Farm Threshold
+    |--------------------------------------------------------------------------
+    |
+    | Crawler farms reuse one exact user agent across hundreds of IPs a day.
+    | page-visits:aggregate-and-prune flags a day's rows as is_bot when their
+    | user_agent_hash came from more than this many distinct ip_hash values,
+    | moving them from visits_count to bot_visits_count. Null disables it.
+    |
+    | Scale it with traffic: modern browsers send reduced, identical UA
+    | strings, so on a busy site a popular real browser can legitimately
+    | exceed a small value. Needs ip_hash + user_agent_hash (no-op under
+    | compliance.analytics_only).
+    |
+    */
+    'farm_ua_ip_threshold' => env('PAGE_VISITS_FARM_UA_IP_THRESHOLD'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Skipped Status Codes
     |--------------------------------------------------------------------------
     |

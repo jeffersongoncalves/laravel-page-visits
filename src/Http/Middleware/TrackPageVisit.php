@@ -39,7 +39,10 @@ class TrackPageVisit
         }
 
         $userAgent = (string) $request->userAgent();
-        $isBot = BotDetector::isBot($userAgent);
+        // Every real browser sends Accept-Language; scripted clients behind
+        // residential proxies often don't, and pass BotDetector otherwise.
+        $isBot = BotDetector::isBot($userAgent)
+            || (config('page-visits.require_accept_language', true) && blank($request->headers->get('accept-language')));
 
         if ($isBot && ! config('page-visits.store_bots', true)) {
             return;

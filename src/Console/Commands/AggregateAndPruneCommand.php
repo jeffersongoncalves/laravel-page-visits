@@ -2,6 +2,7 @@
 
 namespace JeffersonGoncalves\LaravelPageVisits\Console\Commands;
 
+use Closure;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -53,6 +54,8 @@ class AggregateAndPruneCommand extends Command
 
         $query = fn (): Builder => PageVisit::query()->where('visited_at', '>=', $from)->where('visited_at', '<=', $to);
 
+        $this->flagUserAgentFarms($query);
+
         $humans = fn (): Builder => $query()->where('is_bot', false)->where('is_datacenter', false);
 
         $stats = [
@@ -92,6 +95,34 @@ class AggregateAndPruneCommand extends Command
                 'updated_at' => now(),
             ]
         );
+    }
+
+    /**
+     * Crawler farms behind rotating residential proxies reuse a handful of
+     * exact user agents across hundreds of IPs a day. Marks the day's rows
+     * whose user_agent_hash came from more than farm_ua_ip_threshold
+     * distinct ip_hash values as bots, so they leave the human counts.
+     *
+     * @param  Closure(): Builder<PageVisit>  $query
+     */
+    protected function flagUserAgentFarms(Closure $query): void
+    {
+        $threshold = config('page-visits.farm_ua_ip_threshold');
+
+        if (! is_numeric($threshold) || (int) $threshold <= 0) {
+            return;
+        }
+
+        $farmHashes = $query()
+            ->whereNotNull('user_agent_hash')
+            ->whereNotNull('ip_hash')
+            ->groupBy('user_agent_hash')
+            ->havingRaw('count(distinct ip_hash) > ?', [(int) $threshold])
+            ->pluck('user_agent_hash');
+
+        if ($farmHashes->isNotEmpty()) {
+            $query()->whereIn('user_agent_hash', $farmHashes)->where('is_bot', false)->update(['is_bot' => true]);
+        }
     }
 
     protected function prune(): void
