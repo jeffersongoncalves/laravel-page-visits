@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.7.0 - 2026-11-02
+
+### What's new
+
+Flags crawler farms behind rotating residential proxies, which pass both bot detection and `datacenter_asns` (#23, #24).
+
+- **`require_accept_language`** (default `true`, `PAGE_VISITS_REQUIRE_ACCEPT_LANGUAGE`): a request with no or empty `Accept-Language` header is flagged `is_bot`, and skipped entirely when `store_bots` is `false`.
+- **`farm_ua_ip_threshold`** (default `null`, off, `PAGE_VISITS_FARM_UA_IP_THRESHOLD`): `page-visits:aggregate-and-prune` counts a day's rows whose exact user agent came from more than N distinct IPs as bots, moving them from `visits_count` / `unique_visits_count` to `bot_visits_count`. Raw `is_bot` is not rewritten, so re-running with `--date` recomputes the day. Scale it with traffic.
+
+### Behavior change
+
+`require_accept_language` is on by default: visits without `Accept-Language` now count as bots. Some privacy proxies strip the header. Set `PAGE_VISITS_REQUIRE_ACCEPT_LANGUAGE=false` to keep the old behavior.
+
+No new migrations. Republish the config to get the new keys (optional, defaults apply).
+
 ## 1.6.0 - 2026-10-28
 
 ### What's new
@@ -38,6 +53,7 @@ php artisan migrate
 
 
 
+
 ```
 **Full Changelog**: https://github.com/jeffersongoncalves/laravel-page-visits/compare/1.4.0...1.5.0
 
@@ -66,6 +82,7 @@ A new migration adds the column:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 
 
