@@ -115,9 +115,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | Crawler farms reuse one exact user agent across hundreds of IPs a day.
-    | page-visits:aggregate-and-prune flags a day's rows as is_bot when their
+    | page-visits:aggregate-and-prune counts a day's rows as bots when their
     | user_agent_hash came from more than this many distinct ip_hash values,
-    | moving them from visits_count to bot_visits_count. Null disables it.
+    | moving them from visits_count to bot_visits_count. Raw is_bot is left
+    | untouched, so re-running with another value recomputes. Null disables.
     |
     | Scale it with traffic: modern browsers send reduced, identical UA
     | strings, so on a busy site a popular real browser can legitimately

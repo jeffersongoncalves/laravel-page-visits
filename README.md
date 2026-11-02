@@ -162,11 +162,15 @@ shortening `retention_days` for human visits.
 Crawler farms behind rotating residential proxies send browser-like user-agents from residential
 ASNs, so bot detection and `datacenter_asns` both miss them. Two signals catch them:
 
-- `require_accept_language` (default `true`): every real browser sends `Accept-Language`, so a
-  request without one is flagged `is_bot` — and skipped entirely when `store_bots` is `false`.
-- `farm_ua_ip_threshold` (default `null`, off): `page-visits:aggregate-and-prune` flags the day's
-  rows as `is_bot` when their exact user-agent came from more than this many distinct IPs, moving
-  them from `visits_count` / `unique_visits_count` to `bot_visits_count`. Scale it with traffic —
+- `require_accept_language` (default `true`): a heuristic — mainstream browsers send
+  `Accept-Language`, so a request without one is flagged `is_bot`, and skipped entirely when
+  `store_bots` is `false`. Some privacy proxies and extensions strip the header, so a few genuine
+  visits can be flagged (or dropped). Disable it with `PAGE_VISITS_REQUIRE_ACCEPT_LANGUAGE=false`.
+- `farm_ua_ip_threshold` (default `null`, off): `page-visits:aggregate-and-prune` counts the day's
+  rows as bots when their exact user-agent came from more than this many distinct IPs, moving
+  them from `visits_count` / `unique_visits_count` to `bot_visits_count`. Only the daily stats
+  change — raw `is_bot` is left as captured, so changing the threshold and re-running the command
+  (`--date`) recomputes the day. Scale it with traffic —
   modern browsers send reduced, identical UA strings, so on a busy site a popular real browser can
   exceed a small value. A low-traffic site might use `20`. Needs `ip_hash` and `user_agent_hash`, so
   it does nothing under `compliance.analytics_only`.

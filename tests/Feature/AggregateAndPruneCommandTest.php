@@ -85,7 +85,14 @@ it('moves user agents seen from more than farm_ua_ip_threshold IPs into bot visi
 
     expect((int) $row->visits_count)->toBe(3)
         ->and((int) $row->unique_visits_count)->toBe(2)
-        ->and((int) $row->bot_visits_count)->toBe(3);
+        ->and((int) $row->bot_visits_count)->toBe(3)
+        // Raw rows keep their capture-time flag, so turning the threshold off restores them.
+        ->and(PageVisit::query()->where('is_bot', true)->count())->toBe(0);
+
+    config(['page-visits.farm_ua_ip_threshold' => null]);
+    $this->artisan('page-visits:aggregate-and-prune')->assertExitCode(0);
+
+    expect((int) DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->value('visits_count'))->toBe(6);
 });
 
 it('aggregates response time metrics', function () {
