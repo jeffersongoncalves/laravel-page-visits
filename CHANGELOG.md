@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.8.0 - 2026-11-04
+
+### What's new
+
+- `PageVisit::farmUserAgentHashes($from, $to, ?$connection = null)`: user_agent_hash values seen from more than `farm_ua_ip_threshold` distinct IPs in [$from, $to). Empty when the threshold is off. Fractional bounds are rounded up to whole seconds.
+- `PageVisit::query()->excludingFarms($from, $to)` scope: drops farm user agents, keeps rows with a null hash, and runs the lookup on the builder's connection.
+- `page-visits:aggregate-and-prune` uses the shared lookup and aggregates over a half-open [day start, next day start) range.
+
+Consumers (dashboards, trending lists) can now use these instead of copying the crawler-farm query. Closes #25 (#26).
+
 ## 1.7.0 - 2026-11-02
 
 ### What's new
@@ -54,6 +64,7 @@ php artisan migrate
 
 
 
+
 ```
 **Full Changelog**: https://github.com/jeffersongoncalves/laravel-page-visits/compare/1.4.0...1.5.0
 
@@ -82,6 +93,7 @@ A new migration adds the column:
 ```bash
 php artisan vendor:publish --tag="page-visits-migrations"
 php artisan migrate
+
 
 
 
