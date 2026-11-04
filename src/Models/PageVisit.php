@@ -2,8 +2,11 @@
 
 namespace JeffersonGoncalves\LaravelPageVisits\Models;
 
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * @property int $id
@@ -74,5 +77,47 @@ class PageVisit extends Model
     public function getTable(): string
     {
         return config('page-visits.table', 'page_visits');
+    }
+
+    /**
+     * Crawler farms behind rotating residential proxies reuse a handful of
+     * exact user agents across hundreds of IPs a day. Returns the
+     * user_agent_hash values seen from more than farm_ua_ip_threshold
+     * distinct ip_hash values in [$from, $to) (empty when the threshold is off).
+     *
+     * @return Collection<int, string>
+     */
+    public static function farmUserAgentHashes(CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        $threshold = config('page-visits.farm_ua_ip_threshold');
+
+        if (! is_numeric($threshold) || (int) $threshold <= 0) {
+            return collect();
+        }
+
+        return static::query()
+            ->where('visited_at', '>=', $from)
+            ->where('visited_at', '<', $to)
+            ->whereNotNull('user_agent_hash')
+            ->whereNotNull('ip_hash')
+            ->groupBy('user_agent_hash')
+            ->havingRaw('count(distinct ip_hash) > ?', [(int) $threshold])
+            ->pluck('user_agent_hash');
+    }
+
+    /**
+     * Drops rows whose user agent is a farm in [$from, $to). Rows with a
+     * null user_agent_hash are kept.
+     *
+     * @param  Builder<PageVisit>  $query
+     */
+    public function scopeExcludingFarms(Builder $query, CarbonInterface $from, CarbonInterface $to): void
+    {
+        $farm = static::farmUserAgentHashes($from, $to);
+
+        // whereNotIn alone would drop null hashes (NULL NOT IN … is null).
+        $query->when($farm->isNotEmpty(), fn (Builder $q) => $q->where(
+            fn (Builder $q) => $q->whereNull('user_agent_hash')->orWhereNotIn('user_agent_hash', $farm)
+        ));
     }
 }
