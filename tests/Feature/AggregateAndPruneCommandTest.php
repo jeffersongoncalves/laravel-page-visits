@@ -95,6 +95,68 @@ it('moves user agents seen from more than farm_ua_ip_threshold IPs into bot visi
     expect((int) DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->value('visits_count'))->toBe(6);
 });
 
+it('exposes the farm lookup and an excludingFarms scope on the model', function () {
+    $from = now()->subDay()->startOfDay();
+    $to = $from->copy()->addDay();
+
+    $visit = fn (?string $ua, string $ip, $at = null) => PageVisit::query()->create([
+        'visited_at' => $at ?? $from->copy()->setTime(10, 0),
+        'path' => 'blog/hello-world',
+        'method' => 'GET',
+        'is_bot' => false,
+        'ip_hash' => $ip,
+        'user_agent_hash' => $ua,
+        'created_at' => now(),
+    ]);
+
+    foreach (['ip-1', 'ip-2', 'ip-3'] as $ip) {
+        $visit('farm-ua', $ip);
+    }
+    $visit('real-ua', 'ip-4');
+    $visit(null, 'ip-5');
+    // Outside [$from, $to): must not push other-ua over the threshold.
+    $visit('other-ua', 'ip-6');
+    $visit('other-ua', 'ip-7', $to);
+    $visit('other-ua', 'ip-8', $to->copy()->addHour());
+
+    expect(PageVisit::farmUserAgentHashes($from, $to)->all())->toBe([]);
+
+    config(['page-visits.farm_ua_ip_threshold' => 2]);
+
+    expect(PageVisit::farmUserAgentHashes($from, $to)->all())->toBe(['farm-ua'])
+        ->and(PageVisit::query()->where('visited_at', '<', $to)->excludingFarms($from, $to)->count())->toBe(3);
+
+    config(['page-visits.farm_ua_ip_threshold' => '0']);
+
+    expect(PageVisit::query()->excludingFarms($from, $to)->count())->toBe(8);
+});
+
+it('includes visits exactly at $from and excludes visits before it, rounding fractional bounds up', function () {
+    config(['page-visits.farm_ua_ip_threshold' => 2]);
+
+    $from = now()->subDay()->startOfDay();
+    $to = $from->copy()->addDay();
+
+    $visit = fn (string $ua, string $ip, $at) => PageVisit::query()->create([
+        'visited_at' => $at,
+        'path' => 'blog/hello-world',
+        'method' => 'GET',
+        'is_bot' => false,
+        'ip_hash' => $ip,
+        'user_agent_hash' => $ua,
+        'created_at' => now(),
+    ]);
+
+    foreach (['ip-1', 'ip-2', 'ip-3'] as $ip) {
+        $visit('before-ua', $ip, $from->copy()->subSecond());
+        $visit('edge-ua', $ip, $from->copy());
+    }
+
+    expect(PageVisit::farmUserAgentHashes($from, $to)->all())->toBe(['edge-ua'])
+        // A bound half a second before $from rounds up to $from, not down to before-ua's second.
+        ->and(PageVisit::farmUserAgentHashes($from->copy()->subMicroseconds(500000), $to)->all())->toBe(['edge-ua']);
+});
+
 it('aggregates response time metrics', function () {
     foreach ([...range(10, 100, 10), null] as $ms) {
         PageVisit::query()->create([

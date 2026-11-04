@@ -175,6 +175,19 @@ ASNs, so bot detection and `datacenter_asns` both miss them. Two signals catch t
   exceed a small value. A low-traffic site might use `20`. Needs `ip_hash` and `user_agent_hash`, so
   it does nothing under `compliance.analytics_only`.
 
+  To apply the same cut in your own queries (dashboards, trending lists), use the model instead of
+  copying the query:
+
+  ```php
+  use JeffersonGoncalves\LaravelPageVisits\Models\PageVisit;
+
+  // user_agent_hash values over the threshold in [$from, $to); empty when the threshold is off
+  PageVisit::farmUserAgentHashes($from, $to);
+
+  // rows minus farm user agents (rows with a null user_agent_hash are kept)
+  PageVisit::query()->where('is_bot', false)->excludingFarms($from, $to)->count();
+  ```
+
 `skip_status_codes` lists response statuses that are not stored at all — exact codes (`404`) or
 `x` wildcard ranges (`'4xx'`, `'50x'`). Scanner probes often send browser-like user-agents from
 residential ASNs, so neither `store_bots` nor `datacenter_asns` catches them; `[404]` keeps those
