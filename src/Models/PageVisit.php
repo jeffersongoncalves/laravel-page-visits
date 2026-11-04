@@ -84,10 +84,11 @@ class PageVisit extends Model
      * exact user agents across hundreds of IPs a day. Returns the
      * user_agent_hash values seen from more than farm_ua_ip_threshold
      * distinct ip_hash values in [$from, $to) (empty when the threshold is off).
+     * Runs on $connection, or the model's default connection when null.
      *
      * @return Collection<int, string>
      */
-    public static function farmUserAgentHashes(CarbonInterface $from, CarbonInterface $to): Collection
+    public static function farmUserAgentHashes(CarbonInterface $from, CarbonInterface $to, ?string $connection = null): Collection
     {
         $threshold = config('page-visits.farm_ua_ip_threshold');
 
@@ -95,9 +96,13 @@ class PageVisit extends Model
             return collect();
         }
 
-        return static::query()
-            ->where('visited_at', '>=', $from)
-            ->where('visited_at', '<', $to)
+        // visited_at holds whole seconds and bindings drop microseconds, so a
+        // fractional bound is rounded up to keep [$from, $to) exact.
+        $ceil = fn (CarbonInterface $t): CarbonInterface => $t->microsecond > 0 ? $t->copy()->startOfSecond()->addSecond() : $t;
+
+        return static::on($connection)
+            ->where('visited_at', '>=', $ceil($from))
+            ->where('visited_at', '<', $ceil($to))
             ->whereNotNull('user_agent_hash')
             ->whereNotNull('ip_hash')
             ->groupBy('user_agent_hash')
@@ -107,13 +112,13 @@ class PageVisit extends Model
 
     /**
      * Drops rows whose user agent is a farm in [$from, $to). Rows with a
-     * null user_agent_hash are kept.
+     * null user_agent_hash are kept. The lookup runs on the builder's connection.
      *
      * @param  Builder<PageVisit>  $query
      */
     public function scopeExcludingFarms(Builder $query, CarbonInterface $from, CarbonInterface $to): void
     {
-        $farm = static::farmUserAgentHashes($from, $to);
+        $farm = static::farmUserAgentHashes($from, $to, $query->getModel()->getConnectionName());
 
         // whereNotIn alone would drop null hashes (NULL NOT IN … is null).
         $query->when($farm->isNotEmpty(), fn (Builder $q) => $q->where(

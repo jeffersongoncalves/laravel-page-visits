@@ -131,6 +131,32 @@ it('exposes the farm lookup and an excludingFarms scope on the model', function 
     expect(PageVisit::query()->excludingFarms($from, $to)->count())->toBe(8);
 });
 
+it('includes visits exactly at $from and excludes visits before it, rounding fractional bounds up', function () {
+    config(['page-visits.farm_ua_ip_threshold' => 2]);
+
+    $from = now()->subDay()->startOfDay();
+    $to = $from->copy()->addDay();
+
+    $visit = fn (string $ua, string $ip, $at) => PageVisit::query()->create([
+        'visited_at' => $at,
+        'path' => 'blog/hello-world',
+        'method' => 'GET',
+        'is_bot' => false,
+        'ip_hash' => $ip,
+        'user_agent_hash' => $ua,
+        'created_at' => now(),
+    ]);
+
+    foreach (['ip-1', 'ip-2', 'ip-3'] as $ip) {
+        $visit('before-ua', $ip, $from->copy()->subSecond());
+        $visit('edge-ua', $ip, $from->copy());
+    }
+
+    expect(PageVisit::farmUserAgentHashes($from, $to)->all())->toBe(['edge-ua'])
+        // A bound half a second before $from rounds up to $from, not down to before-ua's second.
+        ->and(PageVisit::farmUserAgentHashes($from->copy()->subMicroseconds(500000), $to)->all())->toBe(['edge-ua']);
+});
+
 it('aggregates response time metrics', function () {
     foreach ([...range(10, 100, 10), null] as $ms) {
         PageVisit::query()->create([
