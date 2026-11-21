@@ -42,7 +42,8 @@ class TrackPageVisit
         // Every real browser sends Accept-Language; scripted clients behind
         // residential proxies often don't, and pass BotDetector otherwise.
         $isBot = BotDetector::isBot($userAgent)
-            || (config('page-visits.require_accept_language', true) && blank($request->headers->get('accept-language')));
+            || (config('page-visits.require_accept_language', true) && blank($request->headers->get('accept-language')))
+            || (config('page-visits.flag_forged_search_referer', true) && $this->hasForgedSearchReferer($request));
 
         if ($isBot && ! config('page-visits.store_bots', true)) {
             return;
@@ -107,6 +108,29 @@ class TrackPageVisit
         );
 
         return $patterns !== [] && Str::is($patterns, (string) $status);
+    }
+
+    /**
+     * Crawlers forge a search referer from an engine name plus the app's own
+     * suffix (app on example.dev.br sends www.google.dev.br) — a host that
+     * doesn't exist.
+     */
+    protected function hasForgedSearchReferer(Request $request): bool
+    {
+        $appHost = strtolower($request->getHost());
+        $suffix = Str::after($appHost, '.');
+
+        // ponytail: real engine domains end in "com", a 2-letter ccTLD or
+        // "com|co.<cc>" (google.com.br, yahoo.co.jp); a suffix shaped like
+        // that is never flagged, so a forged google.com.br on a .com.br site
+        // still passes. Swap for a real engine-domain list if that gap shows up.
+        if ($suffix === $appHost || preg_match('/^(com|((com|co)\.)?[a-z]{2})$/', $suffix)) {
+            return false;
+        }
+
+        $refererHost = strtolower((string) parse_url((string) $request->headers->get('referer'), PHP_URL_HOST));
+
+        return preg_match('/^(www\.)?(google|bing|yahoo|duckduckgo|baidu|yandex)\.'.preg_quote($suffix, '/').'$/', $refererHost) === 1;
     }
 
     protected function responseTimeMs(Request $request): ?int

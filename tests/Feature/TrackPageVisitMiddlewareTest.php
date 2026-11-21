@@ -79,6 +79,38 @@ it('flags requests without Accept-Language as bots unless require_accept_languag
     Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === false);
 });
 
+it('flags a forged search referer on the app own suffix, not real engine domains', function (string $appHost, string $referer, bool $isBot) {
+    Queue::fake();
+
+    $this->withHeaders([
+        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36',
+        'Referer' => $referer,
+    ])->get("http://{$appHost}/hello")->assertOk();
+
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === $isBot);
+})->with([
+    'google on own suffix' => ['example.dev.br', 'https://www.google.dev.br/', true],
+    'baidu without www' => ['example.dev.br', 'http://baidu.dev.br/', true],
+    'three-letter gTLD suffix' => ['example.dev', 'https://www.baidu.dev/', true],
+    'google on .dev app' => ['example.dev', 'https://www.google.dev/', true],
+    'real ccTLD engine' => ['example.com.br', 'https://www.google.com.br/', false],
+    'google.com' => ['example.dev.br', 'https://www.google.com/', false],
+    'non-engine host on own suffix' => ['example.dev.br', 'https://blog.dev.br/', false],
+]);
+
+it('drops forged search referers when store_bots is off, and ignores them when the toggle is off', function () {
+    $headers = ['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36', 'Referer' => 'https://www.bing.dev.br/'];
+
+    config(['page-visits.store_bots' => false]);
+    Queue::fake();
+    $this->withHeaders($headers)->get('http://example.dev.br/hello')->assertOk();
+    Queue::assertNotPushed(TrackPageVisitJob::class);
+
+    config(['page-visits.flag_forged_search_referer' => false]);
+    $this->withHeaders($headers)->get('http://example.dev.br/hello')->assertOk();
+    Queue::assertPushed(TrackPageVisitJob::class, fn (TrackPageVisitJob $job) => $job->payload['is_bot'] === false);
+});
+
 it('tracks bot requests by default', function () {
     Queue::fake();
 

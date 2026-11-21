@@ -124,6 +124,8 @@ return [
 
     'require_accept_language' => env('PAGE_VISITS_REQUIRE_ACCEPT_LANGUAGE', true),
 
+    'flag_forged_search_referer' => env('PAGE_VISITS_FLAG_FORGED_SEARCH_REFERER', true),
+
     'farm_ua_ip_threshold' => env('PAGE_VISITS_FARM_UA_IP_THRESHOLD'),
 
     'skip_status_codes' => [],
@@ -160,12 +162,18 @@ are still folded into the daily stats (e.g. the day you flip it, or a `--date` b
 shortening `retention_days` for human visits.
 
 Crawler farms behind rotating residential proxies send browser-like user-agents from residential
-ASNs, so bot detection and `datacenter_asns` both miss them. Two signals catch them:
+ASNs, so bot detection and `datacenter_asns` both miss them. These signals catch them:
 
 - `require_accept_language` (default `true`): a heuristic — mainstream browsers send
   `Accept-Language`, so a request without one is flagged `is_bot`, and skipped entirely when
   `store_bots` is `false`. Some privacy proxies and extensions strip the header, so a few genuine
   visits can be flagged (or dropped). Disable it with `PAGE_VISITS_REQUIRE_ACCEPT_LANGUAGE=false`.
+- `flag_forged_search_referer` (default `true`): some crawlers forge a search-engine referer on the
+  site's own domain suffix — a site on `example.dev.br` gets `https://www.google.dev.br/`, a host
+  that doesn't exist. Such a request (google, bing, yahoo, duckduckgo, baidu, yandex) is flagged
+  `is_bot`, and skipped when `store_bots` is `false`. Suffixes real engines use (`com`, a ccTLD,
+  `com.<cc>`, `co.<cc>`) are never flagged, so `www.google.com.br` on `example.com.br` stays a
+  search visit. Disable it with `PAGE_VISITS_FLAG_FORGED_SEARCH_REFERER=false`.
 - `farm_ua_ip_threshold` (default `null`, off): `page-visits:aggregate-and-prune` counts the day's
   rows as bots when their exact user-agent came from more than this many distinct IPs, moving
   them from `visits_count` / `unique_visits_count` to `bot_visits_count`. Only the daily stats
