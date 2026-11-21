@@ -111,6 +111,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Flag Forged Search Referers
+    |--------------------------------------------------------------------------
+    |
+    | Crawlers forge a search-engine referer on the app's own domain suffix:
+    | a site on example.dev.br gets "https://www.google.dev.br/", a host that
+    | doesn't exist. When true, such a request is flagged is_bot (and skipped
+    | when store_bots is false). Suffixes that real engines use (com, a
+    | ccTLD, com.<cc>, co.<cc>) are never flagged, so www.google.com.br on
+    | example.com.br stays a search visit.
+    |
+    */
+    'flag_forged_search_referer' => env('PAGE_VISITS_FLAG_FORGED_SEARCH_REFERER', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | User-Agent Farm Threshold
     |--------------------------------------------------------------------------
     |
