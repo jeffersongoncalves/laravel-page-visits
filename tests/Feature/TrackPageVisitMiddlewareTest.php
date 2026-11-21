@@ -91,6 +91,8 @@ it('flags a forged search referer on the app own suffix, not real engine domains
 })->with([
     'google on own suffix' => ['example.dev.br', 'https://www.google.dev.br/', true],
     'baidu without www' => ['example.dev.br', 'http://baidu.dev.br/', true],
+    'three-letter gTLD suffix' => ['example.dev', 'https://www.baidu.dev/', true],
+    'google on .dev app' => ['example.dev', 'https://www.google.dev/', true],
     'real ccTLD engine' => ['example.com.br', 'https://www.google.com.br/', false],
     'google.com' => ['example.dev.br', 'https://www.google.com/', false],
     'non-engine host on own suffix' => ['example.dev.br', 'https://blog.dev.br/', false],

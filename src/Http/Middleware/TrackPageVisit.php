@@ -120,11 +120,11 @@ class TrackPageVisit
         $appHost = strtolower($request->getHost());
         $suffix = Str::after($appHost, '.');
 
-        // ponytail: real engine domains end in "com", a ccTLD or "com|co.<cc>"
-        // (google.com.br, yahoo.co.jp); a suffix shaped like that is never
-        // flagged, so a forged google.com.br on a .com.br site still passes.
-        // Swap for a real engine-domain list if that gap ever shows up.
-        if ($suffix === $appHost || preg_match('/^((com|co)\.)?[a-z]{2,3}$/', $suffix)) {
+        // ponytail: real engine domains end in "com", a 2-letter ccTLD or
+        // "com|co.<cc>" (google.com.br, yahoo.co.jp); a suffix shaped like
+        // that is never flagged, so a forged google.com.br on a .com.br site
+        // still passes. Swap for a real engine-domain list if that gap shows up.
+        if ($suffix === $appHost || preg_match('/^(com|((com|co)\.)?[a-z]{2})$/', $suffix)) {
             return false;
         }
 
