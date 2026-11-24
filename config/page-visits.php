@@ -132,8 +132,9 @@ return [
     | Crawler farms reuse one exact user agent across hundreds of IPs a day.
     | page-visits:aggregate-and-prune counts a day's rows as bots when their
     | user_agent_hash came from more than this many distinct ip_hash values,
-    | moving them from visits_count to bot_visits_count. Raw is_bot is left
-    | untouched, so re-running with another value recomputes. Null disables.
+    | moving them from visits_count to bot_visits_count and dropping them
+    | from the breakdowns (referer_stats, ...). Raw is_bot is left untouched,
+    | so re-running (--date) with another value recomputes. Null disables.
     |
     | Scale it with traffic: modern browsers send reduced, identical UA
     | strings, so on a busy site a popular real browser can legitimately
@@ -166,7 +167,7 @@ return [
     | when the GeoIP driver's ASN is in datacenter_asns ("AS" prefix
     | optional); requires a driver that resolves the ASN (e.g. ip_api).
     | Flagged non-bot visits are counted in datacenter_visits_count instead
-    | of visits_count / unique_visits_count.
+    | of visits_count / unique_visits_count and left out of the breakdowns.
     |
     | When store_datacenter is false, flagged visits aren't stored at all.
     |

@@ -84,7 +84,13 @@ php artisan page-visits:aggregate-and-prune --date=2026-09-01
 `country_stats`, `city_stats`, `referer_stats`, `referer_type_stats`, `utm_source_stats`,
 `utm_medium_stats`, `utm_campaign_stats`, `language_stats`, `hourly_stats`) — query it directly via
 `DB::table(config('page-visits.daily_stats_table'))` for "last 7/30/90 days" reporting instead of
-scanning raw rows.
+scanning raw rows. The breakdowns cover the same visits as `visits_count`: bots, farm user agents and
+datacenter visits are left out.
+
+Re-running the command with `--date` recomputes every column of that day, breakdowns included — do it
+after changing `farm_ua_ip_threshold`, or to rebuild days aggregated by a release whose breakdowns still
+counted bots. Only re-run days still within `retention_days`: once the raw rows are pruned, a re-run
+overwrites that day with zeros.
 
 `response_time_stats` holds that day's server response times in milliseconds (bots included, unless `store_bots` is off):
 `{"count": 1200, "avg": 180, "min": 12, "max": 1654, "p50": 140, "p95": 520, "p99": 980}`, or
@@ -176,9 +182,10 @@ ASNs, so bot detection and `datacenter_asns` both miss them. These signals catch
   search visit. Disable it with `PAGE_VISITS_FLAG_FORGED_SEARCH_REFERER=false`.
 - `farm_ua_ip_threshold` (default `null`, off): `page-visits:aggregate-and-prune` counts the day's
   rows as bots when their exact user-agent came from more than this many distinct IPs, moving
-  them from `visits_count` / `unique_visits_count` to `bot_visits_count`. Only the daily stats
+  them from `visits_count` / `unique_visits_count` to `bot_visits_count` and dropping them from the
+  breakdowns (`referer_stats`, `country_stats`, ...). Only the daily stats
   change — raw `is_bot` is left as captured, so changing the threshold and re-running the command
-  (`--date`) recomputes the day. Scale it with traffic —
+  (`--date`) recomputes the day, breakdowns included. Scale it with traffic —
   modern browsers send reduced, identical UA strings, so on a busy site a popular real browser can
   exceed a small value. A low-traffic site might use `20`. Needs `ip_hash` and `user_agent_hash`, so
   it does nothing under `compliance.analytics_only`.
@@ -204,7 +211,7 @@ probes out of `page_visits` and `visits_count`. Empty (default) stores every sta
 Headless scrapers on cloud hosts send real browser user-agents, so bot detection misses them.
 `datacenter_asns` lists cloud/hosting ASNs (AWS, Google Cloud, Azure, Tencent, Huawei, DigitalOcean,
 OVH, Hetzner by default — `AS` prefix optional); a visit whose GeoIP ASN matches is stored with
-`is_datacenter = true` and left out of `visits_count` / `unique_visits_count`. Matching non-bot
+`is_datacenter = true` and left out of `visits_count` / `unique_visits_count` and the breakdowns. Matching non-bot
 visits are counted in `datacenter_visits_count`; matching bot visits stay in `bot_visits_count`
 only. This needs a GeoIP driver that resolves the ASN (e.g. `ip_api`). Set
 `store_datacenter` to `false` (`PAGE_VISITS_STORE_DATACENTER=false`) to drop those visits entirely.

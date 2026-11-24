@@ -95,6 +95,66 @@ it('moves user agents seen from more than farm_ua_ip_threshold IPs into bot visi
     expect((int) DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->value('visits_count'))->toBe(6);
 });
 
+it('builds every breakdown from human visits only', function () {
+    config(['page-visits.farm_ua_ip_threshold' => 2]);
+
+    $visit = fn (string $label, array $attributes = [], int $hour = 3) => PageVisit::query()->create([
+        'visited_at' => now()->subDay()->setTime($hour, 0),
+        'path' => 'blog/hello-world',
+        'method' => 'GET',
+        'is_bot' => false,
+        'is_datacenter' => false,
+        'ip_hash' => "ip-{$label}",
+        'user_agent_hash' => "ua-{$label}",
+        'response_time_ms' => 100,
+        'device_type' => $label,
+        'browser' => $label,
+        'operating_system' => $label,
+        'country_code' => strtoupper(substr($label, 0, 2)),
+        'city' => $label,
+        'referer_host' => "{$label}.test",
+        'referer_type' => $label,
+        'utm_source' => $label,
+        'utm_medium' => $label,
+        'utm_campaign' => $label,
+        'browser_language' => substr($label, 0, 2),
+        'created_at' => now()->subDay(),
+        ...$attributes,
+    ]);
+
+    $visit('human', hour: 10);
+    $visit('human', ['user_agent_hash' => null], hour: 10);
+    $visit('bot', ['is_bot' => true]);
+    $visit('cloud', ['is_datacenter' => true]);
+    foreach (['ip-1', 'ip-2', 'ip-3'] as $ip) {
+        $visit('farm', ['ip_hash' => $ip]);
+    }
+
+    $this->artisan('page-visits:aggregate-and-prune')->assertExitCode(0);
+
+    $row = DB::table('page_visit_daily_stats')->where('date', now()->subDay()->toDateString())->first();
+    $stats = fn (string $column) => json_decode((string) $row->{$column}, true);
+
+    foreach (['device', 'browser', 'os', 'city', 'referer_type', 'utm_source', 'utm_medium', 'utm_campaign'] as $dimension) {
+        expect($stats("{$dimension}_stats"))->toBe(['human' => 2], "{$dimension}_stats");
+    }
+
+    expect((int) $row->visits_count)->toBe(2)
+        ->and($stats('referer_stats'))->toBe(['human.test' => 2])
+        ->and($stats('country_stats'))->toBe(['HU' => 2])
+        ->and($stats('language_stats'))->toBe(['hu' => 2])
+        ->and($stats('hourly_stats'))->toBe([10 => 2])
+        // Server load, not audience: every row counts.
+        ->and($stats('response_time_stats')['count'])->toBe(7);
+
+    // Re-running after a threshold change recomputes the breakdowns.
+    config(['page-visits.farm_ua_ip_threshold' => null]);
+    $this->artisan('page-visits:aggregate-and-prune', ['--date' => now()->subDay()->toDateString()])->assertExitCode(0);
+
+    expect(json_decode((string) DB::table('page_visit_daily_stats')->value('referer_stats'), true))
+        ->toEqual(['human.test' => 2, 'farm.test' => 3]);
+});
+
 it('exposes the farm lookup and an excludingFarms scope on the model', function () {
     $from = now()->subDay()->startOfDay();
     $to = $from->copy()->addDay();
