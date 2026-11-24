@@ -73,11 +73,12 @@ class AggregateAndPruneCommand extends Command
             'datacenter_visits_count' => $notBot()->where('is_datacenter', true)->count(),
         ];
 
+        // Breakdowns describe the same audience as visits_count.
         foreach (self::DIMENSION_COLUMNS as $key => $column) {
-            $stats[$key] = $this->dimensionCounts($query(), $column);
+            $stats[$key] = $this->dimensionCounts($humans(), $column);
         }
 
-        $stats['hourly_stats'] = $this->hourlyCounts($query());
+        $stats['hourly_stats'] = $this->hourlyCounts($humans());
         $stats['response_time_stats'] = $this->responseTimeStats($query());
 
         DB::table(config('page-visits.daily_stats_table', 'page_visit_daily_stats'))->updateOrInsert(
